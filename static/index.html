@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vacuum Agent Simulator</title>
+<style>
+    body {
+        background: #f0f2f5;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 30px;
+    }
+
+    h1 {
+        color: #333;
+        margin-bottom: 30px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 250px);
+        grid-template-rows: repeat(2, 250px);
+        gap: 40px;
+        position: relative;
+    }
+
+    .room {
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 20px;
+        color: #fff;
+        position: relative;
+        transition: background 0.8s ease;
+        overflow: hidden;
+    }
+
+    .status {
+        margin-top: 12px;
+        font-size: 16px;
+    }
+
+    button {
+        margin-top: 35px;
+        padding: 15px 35px;
+        font-size: 18px;
+        border-radius: 6px;
+        border: none;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    button:hover {
+        background-color: #0056b3;
+    }
+
+    .agent {
+        width: 60px;
+        height: 60px;
+        position: absolute;
+        font-size: 50px;
+        transition: all 2s ease;
+    }
+
+    .highlight {
+        box-shadow: 0 0 20px gold;
+        border: 3px solid gold;
+    }
+
+    .cleaning {
+        animation: slowPulse 1.2s infinite;
+    }
+
+    @keyframes slowPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.4); }
+        100% { transform: scale(1); }
+    }
+</style>
+</head>
+<body>
+
+<h1>Vacuum Agent Simulator</h1>
+
+<div class="grid">
+    <div id="room1" class="room" style="background:#ff4d4d">Room 1<span class="status">Dirty</span></div>
+    <div id="room2" class="room" style="background:#4CAF50">Room 2<span class="status">Clean</span></div>
+    <div id="room3" class="room" style="background:#ff4d4d">Room 3<span class="status">Dirty</span></div>
+    <div id="room4" class="room" style="background:#4CAF50">Room 4<span class="status">Clean</span></div>
+</div>
+
+<button onclick="runAgent()">Run Agent</button>
+
+<script>
+async function runAgent() {
+
+    // Remove previous agent
+    document.querySelectorAll(".agent").forEach(a => a.remove());
+
+    // Fetch agent data
+    const response = await fetch("/run-agent");
+    const data = await response.json();
+    const rooms = data.final_state;
+
+    const roomElems = [
+        document.getElementById("room1"),
+        document.getElementById("room2"),
+        document.getElementById("room3"),
+        document.getElementById("room4")
+    ];
+
+    // Create agent
+    const agent = document.createElement("div");
+    agent.className = "agent";
+    agent.innerHTML = "🤖";
+    document.body.appendChild(agent);
+
+    let i = 0;
+
+    function animateStep() {
+        if (i >= rooms.length) return;
+
+        // Move agent to room
+        const rect = roomElems[i].getBoundingClientRect();
+        const bodyRect = document.body.getBoundingClientRect();
+        agent.style.left = rect.left - bodyRect.left + 80 + "px";
+        agent.style.top = rect.top - bodyRect.top + 80 + "px";
+
+        // Highlight room
+        roomElems.forEach(r => r.classList.remove("highlight"));
+        roomElems[i].classList.add("highlight");
+
+        if (!rooms[i].clean) {
+            agent.classList.add("cleaning");
+
+            // Slow cleaning inside the room
+            setTimeout(() => {
+                roomElems[i].style.background = "#4CAF50";
+                roomElems[i].querySelector(".status").textContent = "Clean";
+                agent.classList.remove("cleaning");
+                i++;
+                setTimeout(animateStep, 1000); // next step
+            }, 2000); // slow cleaning animation
+        } else {
+            roomElems[i].style.background = "#4CAF50";
+            roomElems[i].querySelector(".status").textContent = "Clean";
+            i++;
+            setTimeout(animateStep, 1000); // next step
+        }
+    }
+
+    animateStep();
+}
+</script>
+
+</body>
+</html>
